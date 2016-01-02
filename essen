@@ -1,0 +1,133 @@
+#!/bin/bash
+ 
+ echo "Barcode eingabe"
+ echo "A/a Barcode nicht bekannt"
+ read antwort
+
+if [ $antwort = a -o $antwort = A ];
+ then
+  echo "Was für Essen? Sorte oder Marke eingeben"
+  echo "A/a für gesammte Datenbank"
+  read lab
+   if [ $lab = A -o $lab = a ];
+    then 
+      grep [[:alpha:]] /home/kaeptnbalu/Schreibtisch/essen/Datenbank/Verzeichnis
+      echo "Barcode eingabe"
+      read antwort
+   else
+    grep $lab /home/kaeptnbalu/Schreibtisch/essen/Datenbank/Verzeichnis
+    echo "Barcode eingabe"
+    read antwort
+   fi
+fi
+
+if [ -f /home/kaeptnbalu/Schreibtisch/essen/Datenbank/$antwort ]; 
+ then
+  echo "Backofen B/b"
+  echo "Microwelle M/m"
+  echo "Abbrechen A/a"
+  read antwort2
+   if [ $antwort2 = A -o $antwort2 = a ];
+    then 
+    exit
+   fi
+   if [ $antwort2 = B -o $antwort2 = b ];
+   then
+   echo "Umluft U/u"
+   echo "Ober/Unterhitze O/o"
+   read antwort1
+    if [ $antwort1 = U -o $antwort1 = u ]; 
+     then
+      FILE=/home/kaeptnbalu/Schreibtisch/essen/Datenbank/$antwort
+      d=`head -n 1 $FILE`
+      while [ $d -ge 1 ]
+       do
+	clear
+	echo "Noch $d Minuten warten..."
+	sleep 60
+	d=$[$d-1]
+      done
+      echo "He Cheff esse isch fertig"
+      /usr/bin/firefox -new-window http://192.168.178.33:8080/stream.html &
+      cvlc --play-and-exit /home/kaeptnbalu/Schreibtisch/essen/musik/Pizza.mp3
+    elif [ $antwort1 = O -o $antwort1 = o ];
+      then
+      FILE=/home/kaeptnbalu/Schreibtisch/essen/Datenbank/$antwort
+      d=`tail -n1 $FILE`
+      while [ $d -ge 1 ]
+       do
+	clear
+	echo "Noch $d Minuten warten..."
+	sleep 60
+	d=$[$d-1]
+      done
+      echo "He Cheff esse isch fertig"
+      /usr/bin/firefox -new-window http://192.168.178.33:8080/stream.html &
+      cvlc --play-and-exit /home/kaeptnbalu/Schreibtisch/essen/musik/Pizza.mp3
+      exit
+    fi
+   fi
+   if [ $antwort2 = M -o $antwort2 = m ];
+    then
+     FILE=/home/kaeptnbalu/Schreibtisch/essen/Datenbank/$antwort
+     d=`head -n1 $FILE`
+      while [ $d -ge 1 ]
+       do
+	clear
+	echo "Noch $d Minuten warten..."
+	sleep 60
+	d=$[$d-1]
+      done
+     echo "He Cheff esse isch fertig"
+     /usr/bin/firefox -new-window http://192.168.178.33:8080/stream.html &
+     cvlc --play-and-exit /home/kaeptnbalu/Schreibtisch/essen/musik/Pizza.mp3
+     exit
+   fi
+fi
+
+  
+if ! [ -f /home/kaeptnbalu/Schreibtisch/essen/Datenbank/$antwort ];  
+ then
+  echo "Neuer Datenbankeintrag?"
+  echo "J/N"
+  read antwort5
+   if [ $antwort5 = J -o $antwort5 = j ];
+    then
+     cd /home/kaeptnbalu/Schreibtisch/essen/Datenbank
+     echo "Backofen B/b Microwelle M/m"
+     read antwort6
+     if [ $antwort6 = M -o $antwort6 = m ];
+      then
+       echo "Sorte"
+       read sorte
+       echo "Marke"
+       read Marke
+       echo $sorte $Marke = $antwort >> Verzeichnis
+       echo "Dauer"
+       read antwort8
+       echo $anwort8 > $antwort
+       echo "Eintrag $antwort angelegt"
+       exit
+     elif [ $antwort6 = B -o $antwort6 = b ];
+      then
+       echo "Sorte"
+       read sorte
+       echo "Marke"
+       read Marke
+       echo $sorte $Marke = $antwort >> Verzeichnis
+       echo "Dauer Umluft"
+       read antwort8
+       echo "Dauer Ober/unterhitze"
+       read antwort9
+       echo $antwort8 > $antwort
+       echo $antwort9 >> $antwort
+       echo "Eintrag angelegt"
+       exit
+     fi
+   fi
+     if [ $antwort5 = N -o $antwort5 = n ];
+      then
+       exit
+     fi 
+fi
+
