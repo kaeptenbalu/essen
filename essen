@@ -1,5 +1,8 @@
 #!/bin/bash
 
+cd "$(dirname "$0")"
+
+
 # jloehel was here
 
  echo "Barcode eingabe"
@@ -13,17 +16,17 @@ if [ $antwort = a -o $antwort = A ];
   read lab
    if [ $lab = A -o $lab = a ];
     then
-      grep [[:alpha:]] /home/kaeptnbalu/Schreibtisch/essen/Datenbank/Verzeichnis
+      echo "select * from Produkte;" | sqlite3 Datenbank/SQL
       echo "Barcode eingabe"
       read antwort
    else
-    grep $lab /home/kaeptnbalu/Schreibtisch/essen/Datenbank/Verzeichnis
+    echo "select * from Produkte where Sorte like \"$lab\" or Marke like \"$lab\";" | sqlite3 Datenbank/SQL
     echo "Barcode eingabe"
     read antwort
    fi
 fi
 
-if [ -f /home/kaeptnbalu/Schreibtisch/essen/Datenbank/$antwort ];
+if [ -n $(echo "select * from Produkte where Barcode = $antwort;" | sqlite3 Datenbank/SQL) ];
  then
   echo "Backofen B/b"
   echo "Microwelle M/m"
@@ -31,105 +34,74 @@ if [ -f /home/kaeptnbalu/Schreibtisch/essen/Datenbank/$antwort ];
   read antwort2
    if [ $antwort2 = A -o $antwort2 = a ];
     then
-    exit
-   fi
-   if [ $antwort2 = B -o $antwort2 = b ];
-   then
-   echo "Umluft U/u"
-   echo "Ober/Unterhitze O/o"
-   read antwort1
-    if [ $antwort1 = U -o $antwort1 = u ];
-     then
-      FILE=/home/kaeptnbalu/Schreibtisch/essen/Datenbank/$antwort
-      d=`head -n 1 $FILE`
-      while [ $d -ge 1 ]
-       do
-	clear
-	echo "Noch $d Minuten warten..."
-	sleep 60
-	d=$[$d-1]
-      done
-      echo "He Cheff esse isch fertig"
-      /usr/bin/firefox -new-window http://192.168.178.33:8080/stream.html &
-      cvlc --play-and-exit /home/kaeptnbalu/Schreibtisch/essen/musik/Pizza.mp3
-    elif [ $antwort1 = O -o $antwort1 = o ];
-      then
-      FILE=/home/kaeptnbalu/Schreibtisch/essen/Datenbank/$antwort
-      d=`tail -n1 $FILE`
-      while [ $d -ge 1 ]
-       do
-	clear
-	echo "Noch $d Minuten warten..."
-	sleep 60
-	d=$[$d-1]
-      done
-      echo "He Cheff esse isch fertig"
-      /usr/bin/firefox -new-window http://192.168.178.33:8080/stream.html &
-      cvlc --play-and-exit /home/kaeptnbalu/Schreibtisch/essen/musik/Pizza.mp3
-      exit
-    fi
+     exit 0
    fi
    if [ $antwort2 = M -o $antwort2 = m ];
+    then 
+     Zeit=$(echo "select Microwelle_Zeit from Produkte where Barcode = $antwort;" | sqlite3 Datenbank/SQL)
+   fi 
+   if [ $antwort2 = B -o $antwort2 = b ];
     then
-     FILE=/home/kaeptnbalu/Schreibtisch/essen/Datenbank/$antwort
-     d=`head -n1 $FILE`
-      while [ $d -ge 1 ]
-       do
-	clear
-	echo "Noch $d Minuten warten..."
-	sleep 60
-	d=$[$d-1]
-      done
-     echo "He Cheff esse isch fertig"
-     /usr/bin/firefox -new-window http://192.168.178.33:8080/stream.html &
-     cvlc --play-and-exit /home/kaeptnbalu/Schreibtisch/essen/musik/Pizza.mp3
-     exit
-   fi
+     echo "Umluft U/u"
+     echo "Ober/Unterhitze O/o"
+     read antwort1
+     if [ $antwort1 = U -o $antwort1 = u ];
+      then
+       Zeit=$(echo "select Umluft_Zeit from Produkte where Barcode = $antwort;" | sqlite3 Datenbank/SQL)
+     elif [ $antwort1 = O -o $antwort1 = o];
+      then
+       Zeit=$(echo "select OUHitze_Zeit from Produkte where Barcode = $antwort;" | sqlite3 Datenbank/SQL)
+     fi
+   fi 
+   while [ $Zeit -ge 1 ];
+    do
+     clear
+     echo "Noch $Zeit Minuten warten..."
+     sleep 60
+     Zeit=$[$Zeit-1]
+   done
+   echo "He Cheff esse isch fertig"
+   /usr/bin/firefox -new-window http://192.168.178.33:8080/stream.html &
+   cvlc --play-and-exit /home/kaeptnbalu/Schreibtisch/essen/musik/Pizza.mp3
+   exit
 fi
 
-
-if ! [ -f /home/kaeptnbalu/Schreibtisch/essen/Datenbank/$antwort ];
+if [ -z $(echo "select * from Produkte where Barcode = $antwort;" | sqlite3 Datenbank/SQL) ];
  then
   echo "Neuer Datenbankeintrag?"
   echo "J/N"
-  read antwort5
-   if [ $antwort5 = J -o $antwort5 = j ];
+  read erstellen
+   if [ $erstellen = J -o $erstellen = j ];
     then
-     cd /home/kaeptnbalu/Schreibtisch/essen/Datenbank
      echo "Backofen B/b Microwelle M/m"
-     read antwort6
-     if [ $antwort6 = M -o $antwort6 = m ];
+     read BoderM
+     if [ $BoderM = M -o $BoderM = m ];
       then
+       echo "Marke"
+       read marke
        echo "Sorte"
        read sorte
-       echo "Marke"
-       read Marke
-       echo $sorte $Marke = $antwort >> Verzeichnis
        echo "Dauer"
-       read antwort8
-       echo $anwort8 > $antwort
+       read Dauer
+       echo "insert into Produkte values($marke,$schinken, null , null , $Dauer, $antwort);" | SQLite3 Datenbank/SQL
        echo "Eintrag $antwort angelegt"
-       exit
-     elif [ $antwort6 = B -o $antwort6 = b ];
+       exit 0
+     elif [ $BoderM = B -o $BoderM = b ];
       then
+       echo "Marke"
+       read marke
        echo "Sorte"
        read sorte
-       echo "Marke"
-       read Marke
-       echo $sorte $Marke = $antwort >> Verzeichnis
        echo "Dauer Umluft"
-       read antwort8
+       read Umluft
        echo "Dauer Ober/unterhitze"
-       read antwort9
-       echo $antwort8 > $antwort
-       echo $antwort9 >> $antwort
-       echo "Eintrag angelegt"
-       exit
+       read OU
+       echo "insert into Produkte values($marke,$schinken, $Umluft  , $OU  , null , $antwort);" | SQLite3 Datenbank/SQL
+       echo "Eintrag $antwort angelegt"
+       exit 0
      fi
+   else
+    exit 0
    fi
-     if [ $antwort5 = N -o $antwort5 = n ];
-      then
-       exit
-     fi
 fi
 
