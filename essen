@@ -3,8 +3,6 @@
 cd "$(dirname "$0")"
 
 
-# jloehel was here
-
  echo "Barcode eingabe"
  echo "A/a Barcode nicht bekannt"
  read antwort
@@ -16,7 +14,7 @@ if [ $antwort = a -o $antwort = A ];
   read lab
    if [ $lab = A -o $lab = a ];
     then
-      echo "select * from Produkte;" | sqlite3 Datenbank/SQL
+      echo "select Marke, Sorte, Barcode from Produkte;" | sqlite3 Datenbank/SQL
       echo "Barcode eingabe"
       read antwort
    else
@@ -26,7 +24,7 @@ if [ $antwort = a -o $antwort = A ];
    fi
 fi
 
-if [ -n $(echo "select * from Produkte where Barcode = $antwort;" | sqlite3 Datenbank/SQL) ];
+if [ $(echo "select * from Produkte where Barcode = $antwort;" | sqlite3 Datenbank/SQL) ];
  then
   echo "Backofen B/b"
   echo "Microwelle M/m"
@@ -83,9 +81,20 @@ if [ -z $(echo "select * from Produkte where Barcode = $antwort;" | sqlite3 Date
        read sorte
        echo "Dauer"
        read Dauer
-       echo "insert into Produkte values($marke,$schinken, null , null , $Dauer, $antwort);" | SQLite3 Datenbank/SQL
-       echo "Eintrag $antwort angelegt"
+       if [ $Hinweis_gesetzt = J -o $Hinweis_gesetzt = j ];
+        then
+         echo "Hinweis eingeben"
+         read Hinweis
+         echo  "insert into Produkte ( Marke, Sorte, Sonstiges, Microwelle_Zeit,  Barcode )  values(  \"$marke\", \"$sorte\", \"$Hinweis\",$Dauer, $antwort);" | sqlite3 Datenbank/SQL
+         echo "Eintrag $antwort angelegt"
        exit 0
+       else
+        echo "Hinweis wird nicht angelegt"
+        echo  echo "insert into Produkte ( Marke, Sorte, Sonstiges, Microwelle_Zeit,  Barcode  )  values(  \"$marke\", \"$Hinweis\", $Dauer,$antwort);" | sqlite3 Datenbank/SQL
+        echo "Eintrag $antwort angelegt"
+        exit 0
+       fi
+
      elif [ $BoderM = B -o $BoderM = b ];
       then
        echo "Marke"
@@ -96,9 +105,28 @@ if [ -z $(echo "select * from Produkte where Barcode = $antwort;" | sqlite3 Date
        read Umluft
        echo "Dauer Ober/unterhitze"
        read OU
-       echo "insert into Produkte values($marke,$schinken, $Umluft  , $OU  , null , $antwort);" | SQLite3 Datenbank/SQL
-       echo "Eintrag $antwort angelegt"
-       exit 0
+       echo "Hinweis hinzufügen?"
+       echo J/N
+       read Hinweis_gesetzt
+       if [ $Hinweis_gesetzt = J -o $Hinweis_gesetzt = j ];
+        then
+         echo "Hinweis eingeben"
+         read Hinweis
+         echo "insert into Produkte ( Marke, Sorte, Sonstiges, Umluft_Zeit, OUHitze_Zeit, Barcode )  values(  \"$marke\", \"$sorte\", \"$Hinweis\",$Umluft ,$OU ,$antwort);" | sqlite3 Datenbank/SQL
+         echo "Eintrag $antwort angelegt"
+         exit 0
+       elif [ $Hinweis_gesetzt = N -o $Hinweis_gesetzt = n ];
+        then
+        echo "insert into Produkte ( Marke, Sorte, Umluft_Zeit, OUHitze_Zeit, Barcode )  values(  \"$marke\", \"$Hinweis\",$Umluft ,$OU ,$antwort);" | sqlite3 Datenbank/SQL
+        echo "Eintrag $antwort angelegt"
+
+         exit 0
+       else
+        echo "Hinweis wird nicht angelegt"
+        echo  echo "insert into Produkte ( Marke, Sorte, Umluft_Zeit, OUHitze_Zeit, Barcode )  values(  \"$marke\", \"$Hinweis\",$Umluft ,$OU ,$antwort);" | sqlite3 Datenbank/SQL
+        echo "Eintrag $antwort angelegt"
+        exit 0
+       fi
      fi
    else
     exit 0
