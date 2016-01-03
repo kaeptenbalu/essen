@@ -2,29 +2,54 @@
 
 cd "$(dirname "$0")"
 
+error="[\033[0;31mERROR\033[0m]"
+warning="[\033[1;33mWARNING\033[0m]"
+ok="[\033[0;32mOK\033[0m]"
 
- echo "Barcode eingabe"
- echo "A/a Barcode nicht bekannt"
- read antwort
+isNumeric='^[0-9]+$'
 
-if [ $antwort = a -o $antwort = A ];
- then
-  echo "Was für Essen? Sorte oder Marke eingeben"
-  echo "A/a für gesammte Datenbank"
-  read lab
-   if [ $lab = A -o $lab = a ];
-    then
-      echo "select Marke, Sorte, Barcode from Produkte;" | sqlite3 Datenbank/SQL
-      echo "Barcode eingabe"
-      read antwort
-   else
-    echo "select * from Produkte where Sorte like \"$lab\" or Marke like \"$lab\";" | sqlite3 Datenbank/SQL
-    echo "Barcode eingabe"
-    read antwort
-   fi
+if ! [ -f Datenbank/SQL ];then
+    echo -e "$error Datenbank ist nicht vorhanden"
 fi
 
-if [ $(echo "select * from Produkte where Barcode = $antwort;" | sqlite3 Datenbank/SQL) ];
+echo "Barcode eingabe"
+echo "A/a Barcode nicht bekannt"
+read barcode
+
+if [ $barcode = a -o $barcode = A ];
+ then
+  echo "Was für Essen? Sorte oder Marke eingeben."
+  echo "A/a für gesammte Datenbank"
+  read lab
+
+  if [ $lab = A -o $lab = a ];
+   then
+    results=$(echo "select * from Produkte;" | sqlite3 Datenbank/SQL)
+  else
+    results=$(echo "select * from Produkte where Sorte like \"$lab\" or Marke like \"$lab\";" | sqlite3 Datenbank/SQL)
+  fi
+  mapfile -t products <<< "$results"
+  if [ ${products[0]} ];
+   then
+    for product in "${products[@]}"
+    do
+      echo $product
+    done
+    echo "Barcode eingabe"
+    read antwort
+  else
+    echo -e "$warning Keinen Eintrag gefunden"
+    exit 1
+  fi
+elif ! [[ $barcode =~ $isNumeric ]]
+ then
+  echo -e "$error Unbekanntes Barcode-Format"
+  exit 1
+fi
+
+product=$(echo "select * from Produkte where Barcode = \"$barcode\";" | sqlite3 Datenbank/SQL)
+
+if [ $product ];
  then
   echo "Backofen B/b"
   echo "Microwelle M/m"
@@ -35,9 +60,9 @@ if [ $(echo "select * from Produkte where Barcode = $antwort;" | sqlite3 Datenba
      exit 0
    fi
    if [ $antwort2 = M -o $antwort2 = m ];
-    then 
-     Zeit=$(echo "select Microwelle_Zeit from Produkte where Barcode = $antwort;" | sqlite3 Datenbank/SQL)
-   fi 
+    then
+     Zeit=$(echo "select Microwelle_Zeit from Produkte where Barcode = $barcode;" | sqlite3 Datenbank/SQL)
+   fi
    if [ $antwort2 = B -o $antwort2 = b ];
     then
      echo "Umluft U/u"
@@ -45,12 +70,12 @@ if [ $(echo "select * from Produkte where Barcode = $antwort;" | sqlite3 Datenba
      read antwort1
      if [ $antwort1 = U -o $antwort1 = u ];
       then
-       Zeit=$(echo "select Umluft_Zeit from Produkte where Barcode = $antwort;" | sqlite3 Datenbank/SQL)
+       Zeit=$(echo "select Umluft_Zeit from Produkte where Barcode = $barcode;" | sqlite3 Datenbank/SQL)
      elif [ $antwort1 = O -o $antwort1 = o];
       then
-       Zeit=$(echo "select OUHitze_Zeit from Produkte where Barcode = $antwort;" | sqlite3 Datenbank/SQL)
+       Zeit=$(echo "select OUHitze_Zeit from Produkte where Barcode = $barcode;" | sqlite3 Datenbank/SQL)
      fi
-   fi 
+   fi
    while [ $Zeit -ge 1 ];
     do
      clear
@@ -61,11 +86,8 @@ if [ $(echo "select * from Produkte where Barcode = $antwort;" | sqlite3 Datenba
    echo "He Cheff esse isch fertig"
    /usr/bin/firefox -new-window http://192.168.178.33:8080/stream.html &
    cvlc --play-and-exit /home/kaeptnbalu/Schreibtisch/essen/musik/Pizza.mp3
-   exit
-fi
-
-if [ -z $(echo "select * from Produkte where Barcode = $antwort;" | sqlite3 Datenbank/SQL) ];
- then
+   exit 0
+else
   echo "Neuer Datenbankeintrag?"
   echo "J/N"
   read erstellen
@@ -85,13 +107,15 @@ if [ -z $(echo "select * from Produkte where Barcode = $antwort;" | sqlite3 Date
         then
          echo "Hinweis eingeben"
          read Hinweis
-         echo  "insert into Produkte ( Marke, Sorte, Sonstiges, Microwelle_Zeit,  Barcode )  values(  \"$marke\", \"$sorte\", \"$Hinweis\",$Dauer, $antwort);" | sqlite3 Datenbank/SQL
-         echo "Eintrag $antwort angelegt"
+         echo  "insert into Produkte ( Marke, Sorte, Sonstiges,
+         Microwelle_Zeit,  Barcode )  values(  \"$marke\", \"$sorte\", \"$Hinweis\",$Dauer, $barcode);" | sqlite3 Datenbank/SQL
+         echo "Eintrag $barcode angelegt"
        exit 0
        else
         echo "Hinweis wird nicht angelegt"
-        echo  echo "insert into Produkte ( Marke, Sorte, Sonstiges, Microwelle_Zeit,  Barcode  )  values(  \"$marke\", \"$Hinweis\", $Dauer,$antwort);" | sqlite3 Datenbank/SQL
-        echo "Eintrag $antwort angelegt"
+        echo  echo "insert into Produkte ( Marke, Sorte, Sonstiges,
+        Microwelle_Zeit,  Barcode  )  values(  \"$marke\", \"$Hinweis\", $Dauer,$barcode);" | sqlite3 Datenbank/SQL
+        echo "Eintrag $barcode angelegt"
         exit 0
        fi
 
@@ -112,19 +136,21 @@ if [ -z $(echo "select * from Produkte where Barcode = $antwort;" | sqlite3 Date
         then
          echo "Hinweis eingeben"
          read Hinweis
-         echo "insert into Produkte ( Marke, Sorte, Sonstiges, Umluft_Zeit, OUHitze_Zeit, Barcode )  values(  \"$marke\", \"$sorte\", \"$Hinweis\",$Umluft ,$OU ,$antwort);" | sqlite3 Datenbank/SQL
-         echo "Eintrag $antwort angelegt"
+         echo "insert into Produkte ( Marke, Sorte, Sonstiges, Umluft_Zeit,
+         OUHitze_Zeit, Barcode )  values(  \"$marke\", \"$sorte\", \"$Hinweis\",$Umluft ,$OU ,$barcode);" | sqlite3 Datenbank/SQL
+         echo "Eintrag $barcode angelegt"
          exit 0
        elif [ $Hinweis_gesetzt = N -o $Hinweis_gesetzt = n ];
         then
-        echo "insert into Produkte ( Marke, Sorte, Umluft_Zeit, OUHitze_Zeit, Barcode )  values(  \"$marke\", \"$Hinweis\",$Umluft ,$OU ,$antwort);" | sqlite3 Datenbank/SQL
-        echo "Eintrag $antwort angelegt"
+        echo "insert into Produkte ( Marke, Sorte, Umluft_Zeit, OUHitze_Zeit,Barcode )  values(  \"$marke\", \"$Hinweis\",$Umluft ,$OU ,$barcode);" | sqlite3 Datenbank/SQL
+        echo "Eintrag $barcode angelegt"
 
          exit 0
        else
         echo "Hinweis wird nicht angelegt"
-        echo  echo "insert into Produkte ( Marke, Sorte, Umluft_Zeit, OUHitze_Zeit, Barcode )  values(  \"$marke\", \"$Hinweis\",$Umluft ,$OU ,$antwort);" | sqlite3 Datenbank/SQL
-        echo "Eintrag $antwort angelegt"
+        echo  echo "insert into Produkte ( Marke, Sorte, Umluft_Zeit,
+        OUHitze_Zeit, Barcode )  values(  \"$marke\", \"$Hinweis\",$Umluft ,$OU,$barcode);" | sqlite3 Datenbank/SQL
+        echo "Eintrag $barcode angelegt"
         exit 0
        fi
      fi
